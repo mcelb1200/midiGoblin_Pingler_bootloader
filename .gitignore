@@ -1,0 +1,23 @@
+# Build artifacts & intermediate files
+*.o
+*.elf
+dual_boot.bin
+
+# Upstream full source directories & downloaded zip archives
+MIDI_Goblin-midi_goblin_v1.0.5/
+MIDI_Goblin-midi_goblin_v1.0.5.zip
+MIDI_GOBLIN_PINGLER-midi_goblin_pingler_v1_1/
+MIDI_GOBLIN_PINGLER-midi_goblin_pingler_v1_1.zip
+
+# Staging directory for zip generation
+midi-goblin-dual-boot-*/
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+
+# Editor & OS files
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

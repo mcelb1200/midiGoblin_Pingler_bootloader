@@ -1,0 +1,71 @@
+================================================================================
+           MIDI GOBLIN DUAL-BOOTLOADER RELEASE PACKAGE (v1.0.0)
+================================================================================
+
+This package contains everything needed to flash and run the dual-bootloader
+system for MIDI Goblin and Pingler on your MIDI Goblin hardware.
+
+QUICK START INSTRUCTIONS
+================================================================================
+
+1. CONNECT HARDWARE
+   Connect your MIDI Goblin to your computer using a USB data cable.
+
+2. INSTALL TOOLS (IF NOT ALREADY INSTALLED)
+   - Windows: Double-click "install_tools.bat"
+   - Linux / macOS: In terminal, run: bash install_tools.sh
+
+3. FLASH YOUR DEVICE
+   - Windows: Double-click "flash.bat"
+   - Linux: Open terminal, run: ./flash.sh
+   - macOS: Open terminal, run: ./flash.sh
+
+   (The flashing script will automatically detect your MIDI Goblin port,
+    verify the firmware image, and flash at high speed.)
+
+4. BOOT & SELECT FIRMWARE
+   Once flashing finishes, the MIDI Goblin will restart into the Dual Bootloader:
+   - Rotate the encoder or use Left/Right buttons to select firmware:
+       * MIDI Goblin (Default, slot 0)
+       * Pingler (Slot 1)
+   - Press the encoder knob or Menu/Yes button to confirm.
+   - Or hold the Encoder knob / BOOT button at power-on to instantly boot Pingler!
+
+ADVANCED COMMANDS
+================================================================================
+List detected serial ports:
+   python flash.py --list
+
+Erase chip before flashing (recommended for clean install):
+   python flash.py --erase
+
+Specify custom port or baud:
+   python flash.py -p COM3 -b 115200
+
+Flash individual component (from firmware/ folder):
+   python flash.py --component bootloader
+   python flash.py --component midigoblin
+   python flash.py --component pingler
+   python flash.py --component parts
+
+Offline image integrity verification:
+   python verify_image.py midigoblin_dual_consolidated.bin
+
+PACKAGE CONTENTS
+================================================================================
+- midigoblin_dual_consolidated.bin : Complete 4MB flash image (flashed to 0x0)
+- flash.bat                        : Windows 1-click flasher
+- flash.sh                         : Linux & macOS flasher
+- flash.py                         : Universal cross-platform flasher
+- install_tools.bat                : Windows tool installer (esptool & pyserial)
+- install_tools.sh                 : Linux & macOS tool installer
+- verify_image.py                  : Offline integrity and segment validator
+- README.md                        : Detailed documentation & technical notes
+- QUICKSTART.txt                   : This quick-start guide
+- firmware/                        : Individual partition binaries
+    |-- dual_bootloader.bin        (0x001000)
+    |-- partitions.bin             (0x008000)
+    |-- boot_app0.bin              (0x00E000)
+    |-- midi_goblin1_0_5.ino.bin   (0x010000)
+    \-- MIDI_Goblin_Pingler_v_1_1.bin (0x150000)
+================================================================================
