@@ -37,19 +37,19 @@ A dual-bootloader system for the **MIDI Goblin** hardware (ESP32) that allows se
 
 ## Files
 
-- [`midigoblin_dual_consolidated.bin`](file:///c:/Users/micha/github/midigoblin-dual-loader/midigoblin_dual_consolidated.bin) — Consolidated 4MB image ready for hardware or QEMU.
-- [`dual_bootloader.bin`](file:///c:/Users/micha/github/midigoblin-dual-loader/dual_bootloader.bin) — Standalone dual bootloader image (flashed to `0x1000`).
-- [`dual_boot.c`](file:///c:/Users/micha/github/midigoblin-dual-loader/dual_boot.c) — Source code for the dual-bootloader selection and display logic.
-- [`font5x7.h`](file:///c:/Users/micha/github/midigoblin-dual-loader/font5x7.h) — 5x7 ASCII font table extracted from the original firmware.
-- [`build.py`](file:///c:/Users/micha/github/midigoblin-dual-loader/build.py) — Full build script that compiles C source, links against bootloader symbols, injects the routine, and creates the consolidated binary.
-- [`verify_image.py`](file:///c:/Users/micha/github/midigoblin-dual-loader/verify_image.py) — Zero-bandwidth offline verification tool that validates all segments, hashes, and disassembly.
-- [`run_qemu.py`](file:///c:/Users/micha/github/midigoblin-dual-loader/run_qemu.py) — QEMU test runner script.
-- [`flash.py`](file:///c:/Users/micha/github/midigoblin-dual-loader/flash.py) — Universal cross-platform flashing script (Windows, Linux, macOS).
-- [`flash.sh`](file:///c:/Users/micha/github/midigoblin-dual-loader/flash.sh) — Shell script wrapper for Linux and macOS.
-- [`flash.bat`](file:///c:/Users/micha/github/midigoblin-dual-loader/flash.bat) — Batch file wrapper for Windows.
-- [`install_tools.bat`](file:///c:/Users/micha/github/midigoblin-dual-loader/install_tools.bat) — Windows automated tool setup (`esptool`, `pyserial`).
-- [`install_tools.sh`](file:///c:/Users/micha/github/midigoblin-dual-loader/install_tools.sh) — Linux/macOS automated tool setup and `dialout` permission configuration.
-- [`QUICKSTART.txt`](file:///c:/Users/micha/github/midigoblin-dual-loader/QUICKSTART.txt) — Plain-text quick start guide.
+- [`midigoblin_dual_consolidated.bin`](./midigoblin_dual_consolidated.bin) — Consolidated 4MB image ready for hardware or QEMU.
+- [`dual_bootloader.bin`](./dual_bootloader.bin) — Standalone dual bootloader image (flashed to `0x1000`).
+- [`dual_boot.c`](./dual_boot.c) — Source code for the dual-bootloader selection and display logic.
+- [`font5x7.h`](./font5x7.h) — 5x7 ASCII font table extracted from the original firmware.
+- [`build.py`](./build.py) — Full build script that compiles C source, links against bootloader symbols, injects the routine, and creates the consolidated binary.
+- [`verify_image.py`](./verify_image.py) — Zero-bandwidth offline verification tool that validates all segments, hashes, and disassembly.
+- [`run_qemu.py`](./run_qemu.py) — QEMU test runner script.
+- [`flash.py`](./flash.py) — Universal cross-platform flashing script (Windows, Linux, macOS).
+- [`flash.sh`](./flash.sh) — Shell script wrapper for Linux and macOS.
+- [`flash.bat`](./flash.bat) — Batch file wrapper for Windows.
+- [`install_tools.bat`](./install_tools.bat) — Windows automated tool setup (`esptool`, `pyserial`).
+- [`install_tools.sh`](./install_tools.sh) — Linux/macOS automated tool setup and `dialout` permission configuration.
+- [`QUICKSTART.txt`](./QUICKSTART.txt) — Plain-text quick start guide.
 
 ---
 
@@ -147,6 +147,5 @@ python run_qemu.py
 
 If QEMU is not yet installed on your machine, it can be installed (requires ~35 MB download) with:
 ```powershell
-& "C:\Users\micha\.espressif\python_env\idf6.0_py3.13_env\Scripts\python.exe" "C:\Users\micha\.espressif\v6.0.1\esp-idf\tools\idf_tools.py" install qemu-xtensa
+& "~\.espressif\python_env\idf6.0_py3.13_env\Scripts\python.exe" "~\.espressif\v6.0.1\esp-idf\tools\idf_tools.py" install qemu-xtensa
 ```
-*(Run when connected to Wi-Fi to preserve mobile data).*
