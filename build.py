@@ -40,7 +40,8 @@ PINGLER_BIN     = BASE_DIR / "MIDI_Goblin_Pingler_v_1_1.bin"
 # Output files
 DUAL_BOOT_O     = BASE_DIR / "dual_boot.o"
 DUAL_BOOT_ELF   = BASE_DIR / "dual_boot.elf"
-DUAL_BOOT_BIN   = BASE_DIR / "dual_boot.bin"
+DUAL_BOOT_TEXT_BIN = BASE_DIR / "dual_boot_text.bin"
+DUAL_BOOT_DATA_BIN = BASE_DIR / "dual_boot_data.bin"
 OUTPUT_BOOTLOADER = BASE_DIR / "dual_bootloader.bin"
 OUTPUT_CONSOLIDATED = BASE_DIR / "midigoblin_dual_consolidated.bin"
 
@@ -88,39 +89,52 @@ def step2_link():
         print("Linking failed:\n", res.stderr)
         sys.exit(1)
 
-    # Read select_firmware address dynamically
+    # Read entry point and initialized data address dynamically
     res_nm = subprocess.run([str(TOOLCHAIN_NM), str(DUAL_BOOT_ELF)], capture_output=True, text=True)
-    entry_addr = None
+    symbols = {}
     for line in res_nm.stdout.splitlines():
-        if " select_firmware" in line:
-            entry_addr = int(line.split()[0], 16)
-            break
-    print(f"      Verified select_firmware entry at: 0x{entry_addr:08X}")
+        fields = line.split()
+        if len(fields) == 3 and fields[2] in {"select_firmware", "__dual_boot_data_start"}:
+            symbols[fields[2]] = int(fields[0], 16)
 
-    # Extract binary payload
-    cmd_copy = [str(TOOLCHAIN_OBJCOPY), "-O", "binary", str(DUAL_BOOT_ELF), str(DUAL_BOOT_BIN)]
-    res = subprocess.run(cmd_copy, capture_output=True, text=True)
-    if res.returncode != 0:
-        print("Objcopy failed:\n", res.stderr)
+    missing = {"select_firmware", "__dual_boot_data_start"} - symbols.keys()
+    if missing:
+        print(f"Link failed: missing symbols: {', '.join(sorted(missing))}")
         sys.exit(1)
-    print(f"      Linked dual_boot.elf and generated dual_boot.bin ({DUAL_BOOT_BIN.stat().st_size} bytes).")
-    return entry_addr
 
-def step3_patch_bootloader(entry_addr):
+    entry_addr = symbols["select_firmware"]
+    data_addr = symbols["__dual_boot_data_start"]
+    print(f"      Verified select_firmware entry at: 0x{entry_addr:08X}")
+    print(f"      Verified initialized data at: 0x{data_addr:08X}")
+
+    for section, output in [(".text", DUAL_BOOT_TEXT_BIN), (".rodata", DUAL_BOOT_DATA_BIN)]:
+        cmd_copy = [
+            str(TOOLCHAIN_OBJCOPY), "-O", "binary",
+            f"--only-section={section}", str(DUAL_BOOT_ELF), str(output)
+        ]
+        res = subprocess.run(cmd_copy, capture_output=True, text=True)
+        if res.returncode != 0:
+            print(f"Objcopy failed for {section}:\n", res.stderr)
+            sys.exit(1)
+        if not output.exists() or output.stat().st_size == 0:
+            print(f"Objcopy produced an empty {section} payload.")
+            sys.exit(1)
+        print(f"      Generated {output.name} ({output.stat().st_size} bytes).")
+    return entry_addr, data_addr
+
+def step3_patch_bootloader(entry_addr, data_addr):
     print("[3/5] Injecting dual-boot routine into ESP-IDF 2nd-stage bootloader...")
     with open(BASE_BOOTLOADER_BIN, "rb") as f:
         orig = f.read()
 
-    with open(DUAL_BOOT_BIN, "rb") as f:
-        new_seg_data = f.read()
+    payloads = [
+        (0x40081000, DUAL_BOOT_TEXT_BIN),
+        (data_addr, DUAL_BOOT_DATA_BIN),
+    ]
 
-    # Align new segment to 4 bytes
-    if len(new_seg_data) % 4 != 0:
-        new_seg_data += b"\x00" * (4 - (len(new_seg_data) % 4))
-
-    # Update header: 4 segments
+    # Add separate IRAM code and DRAM data segments to the bootloader image.
     header = bytearray(orig[:24])
-    header[1] = 4
+    header[1] = 3 + len(payloads)
 
     segments = []
     offset = 24
@@ -145,8 +159,13 @@ def step3_patch_bootloader(entry_addr):
     segments[2]["data"][patch_offset:patch_offset+3] = patch_bytes
     print(f"      Patched branch at 0x40080623 -> call8 0x{entry_addr:08X} ({' '.join(f'0x{b:02X}' for b in patch_bytes)})")
 
-    # Add Segment 4 at 0x40081000
-    segments.append({"laddr": 0x40081000, "data": new_seg_data})
+    for load_addr, payload_path in payloads:
+        with open(payload_path, "rb") as f:
+            data = f.read()
+        if len(data) % 4:
+            data += b"\x00" * (4 - len(data) % 4)
+        segments.append({"laddr": load_addr, "data": data})
+        print(f"      Added {payload_path.name} at 0x{load_addr:08X} ({len(data)} bytes).")
 
     # Reconstruct binary with valid checksum and SHA-256
     out = bytearray(header)
@@ -165,6 +184,8 @@ def step3_patch_bootloader(entry_addr):
     out += sha
 
     with open(OUTPUT_BOOTLOADER, "wb") as f:
+        f.write(out)
+    with open(FW_DIR / "dual_bootloader.bin", "wb") as f:
         f.write(out)
 
     print(f"      Generated dual_bootloader.bin ({len(out)} bytes).")
@@ -208,7 +229,7 @@ def step5_merge_consolidated():
 
 if __name__ == "__main__":
     step1_compile()
-    entry_addr = step2_link()
-    step3_patch_bootloader(entry_addr)
+    entry_addr, data_addr = step2_link()
+    step3_patch_bootloader(entry_addr, data_addr)
     step4_verify_bootloader()
     step5_merge_consolidated()

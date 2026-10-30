@@ -2,11 +2,16 @@
 
 A dual-bootloader system for the **MIDI Goblin** hardware (ESP32) that allows selecting either **MIDI Goblin** or **Pingler** firmware at launch.
 
+## Release v1.0.1
+
+Hotfix for bootloader data placement and GPIO input setup. The injected boot menu constants load into DRAM, and the mux and encoder GPIO input buffers are enabled so hardware selection works before application firmware starts.
+
 ---
 
 ## Highlights
 
 - **Custom Interactive 2nd-Stage Bootloader**: Executes in IRAM directly on ESP32 startup.
+- The injected boot menu code runs from IRAM, while its strings and font data are loaded into DRAM for safe data access.
 - **SH1106 OLED Display (128x64)**: Shows an interactive menu at power-on with countdown timer.
 - **Hardware Navigation**:
   - **Rotary Encoder**: Rotate knob to toggle between MIDI Goblin and Pingler; push button to confirm and boot.

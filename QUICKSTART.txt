@@ -1,5 +1,5 @@
 ================================================================================
-           MIDI GOBLIN DUAL-BOOTLOADER RELEASE PACKAGE (v1.0.0)
+           MIDI GOBLIN DUAL-BOOTLOADER RELEASE PACKAGE (v1.0.1)
 ================================================================================
 
 This package contains everything needed to flash and run the dual-bootloader

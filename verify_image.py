@@ -69,6 +69,39 @@ def parse_partition_table(data):
         count += 1
     return count > 0
 
+def verify_bootloader_segment_layout(data):
+    print("\n--- Verifying injected bootloader memory layout ---")
+    if len(data) < 24 or data[0] != 0xE9:
+        print(" [FAIL] Bootloader image header is missing or invalid.")
+        return False, None
+
+    segment_count = data[1]
+    offset = 24
+    segments = []
+    for index in range(segment_count):
+        if offset + 8 > len(data):
+            print(f" [FAIL] Segment {index + 1} header is truncated.")
+            return False, None
+        load_addr, size = struct.unpack_from("<II", data, offset)
+        offset += 8
+        if offset + size > len(data):
+            print(f" [FAIL] Segment {index + 1} data is truncated.")
+            return False, None
+        segments.append((load_addr, size))
+        offset += size
+
+    if len(segments) < 5:
+        print(f" [FAIL] Expected code and DRAM-data segments; found {len(segments)} total segments.")
+        return False, None
+
+    code_addr, code_size = segments[3]
+    data_addr, data_size = segments[4]
+    code_ok = code_addr == 0x40081000 and code_size > 0
+    data_ok = 0x3FFB0000 <= data_addr < 0x40000000 and data_size > 0
+    print(f" Code: 0x{code_addr:08X}, {code_size:,} bytes -> {'VALID [PASS]' if code_ok else 'INVALID [FAIL]'}")
+    print(f" Data: 0x{data_addr:08X}, {data_size:,} bytes -> {'VALID [PASS]' if data_ok else 'INVALID [FAIL]'}")
+    return code_ok and data_ok, (code_addr, code_addr + code_size)
+
 def main():
     print("========================================================")
     print(" MIDI Goblin Consolidated Image Offline Verification    ")
@@ -76,16 +109,21 @@ def main():
 
     if not IMAGE_PATH.exists():
         print(f"File not found: {IMAGE_PATH}")
-        return
+        return 1
 
     with open(IMAGE_PATH, "rb") as f:
         img = f.read()
 
     print(f"Total Image File Size: {len(img):,} bytes ({len(img)/(1024*1024):.2f} MB)")
+    checks = [len(img) == 4 * 1024 * 1024]
+    if not checks[-1]:
+        print(" [FAIL] Expected a 4 MiB consolidated image.")
 
     # 1. Bootloader at 0x1000
     bl_data = img[0x1000 : 0x8000]
-    verify_esp32_image("Dual-Bootloader (0x1000)", bl_data)
+    checks.append(verify_esp32_image("Dual-Bootloader (0x1000)", bl_data))
+    layout_ok, code_range = verify_bootloader_segment_layout(bl_data)
+    checks.append(layout_ok)
 
     # Verify bootloader patch at 0x40080623
     # Segment 3 is at 0x40080400, file offset in image is 0x1000 + 24 + (8+1184) + (8+13260) + 8 = 0x489C
@@ -102,21 +140,24 @@ def main():
             word_offset -= 0x40000
         pc = 0x40080623
         target_addr = ((pc + 4) & ~3) + (word_offset * 4)
-        print(f"   Target: call8 0x{target_addr:08X} (select_firmware in Segment 4) -> VERIFIED [PASS]")
+        branch_ok = code_range is not None and code_range[0] <= target_addr < code_range[1]
+        print(f"   Target: call8 0x{target_addr:08X} (in injected IRAM code) -> {'VERIFIED [PASS]' if branch_ok else 'INVALID [FAIL]'}")
+        checks.append(branch_ok)
     else:
-        print(f"   Warning: Unexpected opcode at 0x40080623: {patch_bytes.hex()}")
+        print(f"   [FAIL] Unexpected opcode at 0x40080623: {patch_bytes.hex()}")
+        checks.append(False)
 
     # 2. Partition Table at 0x8000
     pt_data = img[0x8000 : 0x9000]
-    parse_partition_table(pt_data)
+    checks.append(parse_partition_table(pt_data))
 
     # 3. App 0 (MIDI Goblin) at 0x10000
     app0_data = img[0x10000 : 0x150000]
-    verify_esp32_image("App 0: MIDI Goblin (0x10000)", app0_data)
+    checks.append(verify_esp32_image("App 0: MIDI Goblin (0x10000)", app0_data))
 
     # 4. App 1 (Pingler) at 0x150000
     app1_data = img[0x150000 : 0x290000]
-    verify_esp32_image("App 1: Pingler (0x150000)", app1_data)
+    checks.append(verify_esp32_image("App 1: Pingler (0x150000)", app1_data))
 
     # Memory Map Diagram
     print("\n========================================================")
@@ -131,7 +172,11 @@ def main():
     print("  0x290000 - 0x3F0000 : SPIFFS Partition (1,408 KB)")
     print("  0x3F0000 - 0x400000 : Core Dump (64 KB)")
     print("========================================================")
-    print(" ALL CHECKS PASSED: Image is structurally flawless and ready for hardware / QEMU.\n")
+    if all(checks):
+        print(" ALL CHECKS PASSED: Image structure and bootloader memory layout are valid.\n")
+        return 0
+    print(" VERIFICATION FAILED: One or more image checks failed.\n")
+    return 1
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

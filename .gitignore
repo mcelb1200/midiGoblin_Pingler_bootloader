@@ -2,6 +2,8 @@
 *.o
 *.elf
 dual_boot.bin
+dual_boot_text.bin
+dual_boot_data.bin
 
 # Upstream full source directories & downloaded zip archives
 MIDI_Goblin-midi_goblin_v1.0.5/

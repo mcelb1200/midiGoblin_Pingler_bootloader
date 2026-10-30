@@ -13,7 +13,7 @@ import zipfile
 import hashlib
 from pathlib import Path
 
-VERSION = "v1.0.0"
+VERSION = "v1.0.1"
 BASE_DIR = Path(__file__).resolve().parent
 PKG_NAME = f"midi-goblin-dual-boot-{VERSION}"
 PKG_DIR = BASE_DIR / PKG_NAME
